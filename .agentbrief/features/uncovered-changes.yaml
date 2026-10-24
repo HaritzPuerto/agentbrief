@@ -1,0 +1,23 @@
+id: uncovered-changes
+title: Flag changes no feature explains
+status: done
+summary: >
+  The overview lists every file the agent changed (according to git) that no
+  feature points to, so undocumented changes don't slip through.
+code:
+  - path: src/agentbrief/core.py
+    symbol: changed_files
+  - path: src/agentbrief/core.py
+    symbol: overview
+tests:
+  - path: tests/test_core.py
+    symbol: test_overview_lists_changed_files_no_feature_covers
+  - path: tests/test_core.py
+    symbol: test_done_feature_without_tests_or_questions_is_a_problem
+questions:
+  - question: Which files appear in the "changed files no feature explains" list?
+    answer: Files git reports as changed (vs HEAD or --base) or untracked, that no manifest references and that aren't in uncovered_ignore.
+    about: src/agentbrief/core.py::overview
+  - question: Does an unexplained changed file make `agentbrief check` fail?
+    answer: No, it's only a warning. Only manifest problems make it exit 1.
+    about: src/agentbrief/cli.py::cmd_check

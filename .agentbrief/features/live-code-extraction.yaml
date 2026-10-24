@@ -1,0 +1,38 @@
+id: live-code-extraction
+title: Show the exact code behind a feature
+status: done
+summary: >
+  For every feature, the reviewer sees the real function or class it refers
+  to, read straight from the project files, so the explanation can never
+  drift from the code.
+details: >
+  Python symbols are found by name (including methods and decorators).
+  Other languages use explicit line ranges. Files outside the project are
+  never read.
+code:
+  - path: src/agentbrief/extract.py
+    symbol: find_python_symbol
+  - path: src/agentbrief/extract.py
+    symbol: extract
+    note: returns problems as messages instead of failing
+  - path: src/agentbrief/extract.py
+    symbol: resolve_in_root
+    note: blocks paths that escape the project folder
+tests:
+  - path: tests/test_extract.py
+    symbol: test_symbol_span_includes_decorators
+  - path: tests/test_extract.py
+    symbol: test_method_lookup_by_dotted_name
+  - path: tests/test_extract.py
+    symbol: test_errors_are_reported_not_raised
+    note: includes the path-escape case
+questions:
+  - question: When a manifest points at a decorated Python function, are the decorators shown?
+    answer: Yes. The snippet starts at the first decorator line, not at the def.
+    about: src/agentbrief/extract.py::find_python_symbol
+  - question: What does the reviewer see if the agent points at a function that doesn't exist?
+    answer: An error message on that code card ("symbol ... not found"); the tool doesn't crash.
+    about: src/agentbrief/extract.py::extract
+  - question: Can a manifest make the UI display a file outside the project, like ../../etc/passwd?
+    answer: No. Paths are resolved and anything outside the project root is refused.
+    about: src/agentbrief/extract.py::resolve_in_root

@@ -1,0 +1,2 @@
+# Files that change without needing a feature manifest.
+uncovered_ignore: [".gitignore", "README.md", "LICENSE", "AGENTS.md", "pyproject.toml", "tests/conftest.py", "src/agentbrief/__init__.py"]

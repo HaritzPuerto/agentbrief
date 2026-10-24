@@ -1,0 +1,697 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Agentbrief</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<!-- Fonts load without blocking the page: offline or on a slow network, system fonts are used and the app still starts. -->
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible+Mono:wght@400;600&family=Atkinson+Hyperlegible+Next:ital,wght@0,400;0,600;0,700;1,400&display=swap" media="print" onload="this.media='all'">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js" defer></script>
+<style>
+/* Proofing desk: cool paper, ink text, a highlighter for whatever still needs your eyes. */
+:root {
+  --paper: #f4f6f9; --sheet: #ffffff; --ink: #17223b; --pencil: #5d687d; --rule: #dce1e9; --rule-strong: #c5ccd8;
+  --highlight: #ffe14d; --highlight-soft: rgba(255, 225, 77, .55);
+  --verified: #15795a; --verified-soft: #e3f3ec; --correction: #bf3a2f; --correction-soft: #fbe9e7;
+  --focus: #2446c8; --well: #f8f9fb;
+  --tk-keyword: #2446c8; --tk-string: #8a4b0f; --tk-number: #7a3fb0; --tk-comment: #6f7a8e; --tk-title: #17223b; --tk-builtin: #0f6b74;
+  --font: "Atkinson Hyperlegible Next", "Atkinson Hyperlegible", system-ui, sans-serif;
+  --mono: "Atkinson Hyperlegible Mono", ui-monospace, SFMono-Regular, Menlo, monospace;
+  color-scheme: light;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --paper: #11151d; --sheet: #181e29; --ink: #e5e9f1; --pencil: #98a2b4; --rule: #29313f; --rule-strong: #3a4456;
+    --highlight: #e9c53a; --highlight-soft: rgba(233, 197, 58, .28);
+    --verified: #4cc495; --verified-soft: rgba(76, 196, 149, .12); --correction: #f0786c; --correction-soft: rgba(240, 120, 108, .12);
+    --focus: #8ea6ff; --well: #141922;
+    --tk-keyword: #8ea6ff; --tk-string: #e6b17a; --tk-number: #c79bf2; --tk-comment: #7d879a; --tk-title: #f2f4f8; --tk-builtin: #6cc8cf;
+    color-scheme: dark;
+  }
+}
+
+* { box-sizing: border-box; }
+html { -webkit-text-size-adjust: 100%; }
+body { margin: 0; background: var(--paper); color: var(--ink); font: 15px/1.55 var(--font); }
+code, pre, .mono { font-family: var(--mono); font-size: 13px; }
+a { color: inherit; }
+:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; border-radius: 3px; }
+h1, h2, h3 { margin: 0; line-height: 1.2; }
+
+/* Highlighter: the one recurring mark. It means "you haven't looked at this yet". */
+.hl { background: linear-gradient(transparent 12%, var(--highlight-soft) 12%, var(--highlight-soft) 88%, transparent 88%);
+  padding: 0 .15em; margin: 0 -.15em; -webkit-box-decoration-break: clone; box-decoration-break: clone; }
+
+button { font: inherit; font-size: 14px; cursor: pointer; border-radius: 6px; padding: 7px 14px; border: 1px solid var(--rule-strong);
+  background: var(--sheet); color: var(--ink); }
+button:hover:not(:disabled) { border-color: var(--ink); }
+button:disabled { cursor: not-allowed; opacity: .45; }
+button.primary { background: var(--ink); border-color: var(--ink); color: var(--sheet); font-weight: 600; }
+button.quiet { border-color: transparent; background: transparent; color: var(--pencil); padding: 5px 8px; }
+button.quiet:hover:not(:disabled) { color: var(--ink); border-color: var(--rule); }
+button.danger { color: var(--correction); border-color: var(--correction); }
+button.danger:hover:not(:disabled) { border-color: var(--correction); background: var(--correction-soft); }
+textarea { width: 100%; min-height: 56px; padding: 9px 10px; border: 1px solid var(--rule-strong); border-radius: 6px; resize: vertical;
+  background: var(--sheet); color: var(--ink); font: inherit; font-size: 14px; }
+
+/* ------------------------------------------------------------ frame */
+.topbar { position: sticky; top: 0; z-index: 3; height: 52px; display: flex; align-items: center; gap: 16px; padding: 0 20px;
+  background: var(--sheet); border-bottom: 1px solid var(--rule); }
+.brand { font-weight: 700; font-size: 15px; white-space: nowrap; }
+.project { flex: 1; min-width: 0; color: var(--pencil); font-size: 12.5px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.app { display: grid; grid-template-columns: 276px minmax(0, 1fr); min-height: calc(100vh - 52px); }
+.app.with-signoff { grid-template-columns: 276px minmax(0, 1fr) 312px; }
+
+/* ------------------------------------------------------------ sidebar */
+.sidebar { border-right: 1px solid var(--rule); background: var(--paper); position: sticky; top: 52px; align-self: start;
+  height: calc(100vh - 52px); overflow-y: auto; padding: 14px 0 40px; }
+.filter { margin: 0 14px 10px; width: calc(100% - 28px); padding: 7px 10px; border: 1px solid var(--rule-strong); border-radius: 6px;
+  background: var(--sheet); color: var(--ink); font: inherit; font-size: 14px; }
+.nav-link { position: relative; display: block; padding: 8px 18px 8px 26px; text-decoration: none; border-left: 3px solid transparent; }
+.pending { position: absolute; left: 9px; top: 14px; width: 9px; height: 9px; border-radius: 2px; background: var(--highlight); }
+.sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+.nav-link:hover { background: var(--sheet); }
+.nav-link.active { background: var(--sheet); border-left-color: var(--ink); }
+.nav-home { font-weight: 600; margin-bottom: 6px; }
+.sidebar-key { margin: 22px 18px 0 29px; font-size: 12.5px; color: var(--pencil); display: flex; gap: 7px; align-items: center; }
+.sidebar-key .pending { position: static; flex: none; }
+.nav-group { margin: 16px 18px 4px 29px; font-size: 13px; font-weight: 700; color: var(--pencil); }
+.nav-group span { font-weight: 400; }
+.nav-title { font-size: 14.5px; font-weight: 600; line-height: 1.35; }
+.nav-meta { margin-top: 3px; font-size: 12.5px; color: var(--pencil); display: flex; gap: 12px; flex-wrap: wrap; }
+
+/* ------------------------------------------------------------ status text (glyph + words, no pills) */
+.st { white-space: nowrap; }
+.st-ok { color: var(--verified); } .st-bad { color: var(--correction); } .st-idle { color: var(--pencil); }
+.st-glyph { display: inline-block; width: 1.05em; text-align: center; font-weight: 700; }
+
+/* ------------------------------------------------------------ reading column */
+.main { padding: 36px 44px 96px; min-width: 0; }
+.page { max-width: 940px; }
+.kicker { color: var(--pencil); font-size: 13.5px; margin-bottom: 8px; display: flex; gap: 16px; flex-wrap: wrap; }
+.title { font-size: 30px; font-weight: 700; letter-spacing: -.012em; max-width: 26em; }
+.status-line { margin-top: 10px; display: flex; gap: 18px; flex-wrap: wrap; font-size: 14px; }
+.summary { font-size: 18px; line-height: 1.6; max-width: 66ch; margin: 18px 0 0; }
+.details { color: var(--pencil); max-width: 70ch; margin: 10px 0 0; white-space: pre-wrap; }
+.section { margin-top: 44px; }
+.section-head { display: flex; align-items: baseline; gap: 14px; flex-wrap: wrap; margin-bottom: 4px; }
+.section-head h2 { font-size: 19px; font-weight: 700; }
+.section-head .count { color: var(--pencil); font-weight: 400; }
+.section-intro { color: var(--pencil); font-size: 14px; margin: 2px 0 14px; max-width: 70ch; }
+.problems { margin-top: 22px; border-left: 3px solid var(--correction); background: var(--correction-soft); padding: 10px 16px; border-radius: 0 6px 6px 0; }
+.problems b { color: var(--correction); }
+.problems ul { margin: 4px 0 0; padding-left: 18px; }
+
+/* ------------------------------------------------------------ code blocks: a well with a highlighter tab until checked */
+.block { margin-top: 16px; border: 1px solid var(--rule); border-left: 4px solid var(--highlight); border-radius: 4px 8px 8px 4px;
+  background: var(--sheet); overflow: hidden; }
+.block.checked { border-left-color: var(--verified); }
+.block.plain { border-left: 1px solid var(--rule); border-radius: 8px; }
+.block-head { display: flex; align-items: center; gap: 12px; padding: 9px 12px 9px 14px; flex-wrap: wrap; }
+.where { flex: 1; min-width: 220px; font-size: 13.5px; overflow-wrap: anywhere; }
+.where code { font-size: 13px; color: var(--pencil); }
+.where b { font-family: var(--mono); font-size: 13.5px; font-weight: 600; }
+.where .lines { color: var(--pencil); font-size: 12.5px; margin-left: 6px; white-space: nowrap; }
+.mv { display: grid; grid-template-columns: 38px 1fr; align-items: baseline; }
+.mv + .mv { margin-top: 3px; }
+.mv-l { color: var(--pencil); font-size: 12.5px; }
+.move-kind, .when { font-size: 12.5px; color: var(--pencil); white-space: nowrap; }
+.block-note { margin: 0; padding: 0 14px 10px; color: var(--pencil); font-size: 14px; max-width: 80ch; }
+.block-msg { padding: 8px 14px; font-size: 13.5px; color: var(--pencil); border-top: 1px solid var(--rule); }
+.block-msg.warn { color: var(--ink); background: var(--highlight-soft); }
+.block-err { padding: 10px 14px; color: var(--correction); border-top: 1px solid var(--rule); }
+
+.tick { display: inline-flex; align-items: center; gap: 7px; font-size: 13.5px; cursor: pointer; user-select: none; white-space: nowrap;
+  padding: 4px 10px 4px 8px; border-radius: 6px; border: 1px solid var(--rule-strong); }
+.tick:hover { border-color: var(--ink); }
+.tick input { width: 16px; height: 16px; margin: 0; accent-color: var(--verified); }
+.block.checked .tick { border-color: transparent; color: var(--verified); font-weight: 600; }
+
+.code { display: grid; grid-template-columns: auto minmax(0, 1fr); background: var(--well); border-top: 1px solid var(--rule);
+  max-height: 540px; overflow: auto; }
+.code pre { margin: 0; padding: 12px 14px; line-height: 1.6; }
+.code .gutter { text-align: right; color: var(--pencil); opacity: .6; user-select: none; padding-right: 10px; }
+.code .src { overflow-x: auto; }
+.diff { margin: 0; padding: 12px 14px; background: var(--well); border-top: 1px solid var(--rule); overflow-x: auto; max-height: 540px; line-height: 1.6; }
+.diff span { display: block; min-height: 1.6em; }
+.diff .add { background: var(--verified-soft); color: var(--verified); }
+.diff .del { background: var(--correction-soft); color: var(--correction); }
+.diff .hunk { color: var(--pencil); }
+details > summary { cursor: pointer; padding: 8px 14px; font-size: 13.5px; color: var(--pencil); border-top: 1px solid var(--rule); }
+details > summary:hover { color: var(--ink); }
+.failure { margin: 0; padding: 12px 14px; background: var(--correction-soft); color: var(--correction); white-space: pre-wrap;
+  overflow-x: auto; max-height: 380px; border-top: 1px solid var(--rule); }
+
+/* syntax colors tuned to the ink palette */
+.hljs-keyword, .hljs-selector-tag, .hljs-meta .hljs-keyword { color: var(--tk-keyword); }
+.hljs-string, .hljs-regexp, .hljs-template-variable { color: var(--tk-string); }
+.hljs-number, .hljs-literal { color: var(--tk-number); }
+.hljs-comment, .hljs-quote { color: var(--tk-comment); font-style: italic; }
+.hljs-title, .hljs-title.function_, .hljs-title.class_ { color: var(--tk-title); font-weight: 600; }
+.hljs-built_in, .hljs-type, .hljs-meta, .hljs-attr { color: var(--tk-builtin); }
+
+/* ------------------------------------------------------------ questions */
+.q { margin-top: 16px; padding: 16px 18px; background: var(--sheet); border: 1px solid var(--rule); border-radius: 8px; display: grid; gap: 10px; }
+.q-text { margin: 0; font-size: 16.5px; line-height: 1.45; max-width: 70ch; }
+.q-num { font-weight: 700; margin-right: 6px; }
+.q-row { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; font-size: 14px; }
+.answer { border-left: 3px solid var(--ink); padding: 4px 0 4px 14px; max-width: 70ch; white-space: pre-wrap; }
+.answer .look { display: block; margin-top: 4px; color: var(--pencil); font-size: 13px; }
+.grade.selected-ok { background: var(--verified); border-color: var(--verified); color: var(--sheet); }
+.grade.selected-bad { background: var(--correction); border-color: var(--correction); color: var(--sheet); }
+
+/* ------------------------------------------------------------ sign-off panel: the one bold element */
+.signoff { border-left: 1px solid var(--rule); background: var(--sheet); position: sticky; top: 52px; align-self: start;
+  height: calc(100vh - 52px); overflow-y: auto; padding: 28px 24px 40px; display: none; }
+.app.with-signoff .signoff { display: block; }
+.signoff h2 { font-size: 19px; font-weight: 700; }
+.signoff-intro { color: var(--pencil); font-size: 13.5px; margin: 4px 0 18px; }
+.gate { list-style: none; margin: 0 0 20px; padding: 0; display: grid; gap: 12px; }
+.gate li { display: grid; grid-template-columns: 22px 1fr; gap: 2px 8px; font-size: 14.5px; }
+.gate .mark { width: 18px; height: 18px; border-radius: 50%; border: 2px solid var(--rule-strong); margin-top: 2px; }
+.gate li.todo .mark { border-color: var(--highlight); background: var(--highlight-soft); }
+.gate li.done .mark { border-color: var(--verified); background: var(--verified); box-shadow: inset 0 0 0 3px var(--sheet); }
+.gate .gate-sub { grid-column: 2; color: var(--pencil); font-size: 13px; }
+.gate li.info .mark { border-style: dashed; }
+.signoff textarea { margin-bottom: 12px; }
+.signoff .actions { display: grid; gap: 8px; }
+.signoff .actions button { width: 100%; padding: 10px 14px; }
+.signoff .clear { margin-top: 4px; justify-self: center; }
+.signoff-hint { color: var(--pencil); font-size: 13px; margin: 8px 0 0; text-align: center; }
+.handoff { margin: -4px 0 22px; }
+.handoff button { width: 100%; padding: 10px 14px; }
+.handoff .signoff-hint { margin-top: 6px; }
+.stamp { display: inline-block; margin: 0 0 18px; padding: 8px 14px 7px; border: 2.5px solid currentColor; border-radius: 5px;
+  transform: rotate(-2.5deg); font-weight: 700; font-size: 17px; letter-spacing: .01em; line-height: 1.25; }
+.stamp small { display: block; font-weight: 400; font-size: 12.5px; letter-spacing: 0; }
+.stamp.ok { color: var(--verified); } .stamp.bad { color: var(--correction); }
+.stamp.fresh { animation: stamp .32s cubic-bezier(.2, .9, .3, 1.3); }
+@keyframes stamp { from { transform: rotate(-9deg) scale(1.35); opacity: 0; } to { transform: rotate(-2.5deg) scale(1); opacity: 1; } }
+.stale-note { background: var(--highlight-soft); padding: 8px 12px; border-radius: 6px; font-size: 13.5px; margin-bottom: 16px; }
+
+/* ------------------------------------------------------------ overview */
+.lede { font-size: 18px; line-height: 1.6; max-width: 62ch; margin: 14px 0 0; }
+.queue { list-style: none; margin: 0; padding: 0; border-top: 1px solid var(--rule); }
+.queue li { border-bottom: 1px solid var(--rule); }
+.queue a { position: relative; padding-left: 22px !important; display: flex; gap: 16px; align-items: baseline; padding: 12px 4px; text-decoration: none; flex-wrap: wrap; }
+.queue a:hover .queue-title { text-decoration: underline; text-underline-offset: 3px; }
+.queue-title { font-weight: 600; font-size: 15.5px; }
+.queue .pending { left: 4px; top: 19px; }
+.queue-why { color: var(--pencil); font-size: 14px; }
+.queue-kind { margin-left: auto; color: var(--pencil); font-size: 13px; }
+.files { list-style: none; margin: 0; padding: 0; border-top: 1px solid var(--rule); }
+.files li { padding: 7px 4px; border-bottom: 1px solid var(--rule); font-family: var(--mono); font-size: 13px; }
+.empty { color: var(--pencil); padding: 18px 0; }
+.empty-hero { padding: 40px 0; max-width: 56ch; }
+.empty-hero p { font-size: 17px; }
+
+.toast { position: fixed; bottom: 22px; left: 50%; transform: translate(-50%, 8px); background: var(--ink); color: var(--sheet);
+  padding: 10px 16px; border-radius: 8px; opacity: 0; transition: opacity .18s, transform .18s; pointer-events: none;
+  max-width: min(520px, calc(100vw - 32px)); font-size: 14px; z-index: 5; }
+.toast.show { opacity: 1; transform: translate(-50%, 0); }
+
+/* ------------------------------------------------------------ responsive */
+@media (max-width: 1220px) {
+  .app.with-signoff { grid-template-columns: 276px minmax(0, 1fr); }
+  .app.with-signoff .signoff { grid-column: 2; position: static; height: auto; border-left: 0; border-top: 1px solid var(--rule); padding: 28px 44px 60px; }
+  .signoff .actions { grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); max-width: 640px; }
+  .signoff textarea { max-width: 640px; }
+}
+@media (max-width: 820px) {
+  .app, .app.with-signoff { grid-template-columns: minmax(0, 1fr); }
+  .sidebar { position: static; height: auto; max-height: 42vh; border-right: 0; border-bottom: 1px solid var(--rule); }
+  .main { padding: 24px 16px 60px; }
+  .app.with-signoff .signoff { grid-column: 1; padding: 24px 16px 48px; }
+  .title { font-size: 25px; }
+  .project { display: none; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .stamp.fresh { animation: none; }
+  .toast { transition: none; }
+}
+</style>
+</head>
+<body>
+<header class="topbar">
+  <span class="brand">Agentbrief</span>
+  <span class="project" id="root"></span>
+  <button id="run-all">Run all tests</button>
+</header>
+<div class="app" id="app">
+  <nav class="sidebar" aria-label="Features">
+    <input class="filter" id="filter" placeholder="Filter" aria-label="Filter features" autocomplete="off">
+    <a class="nav-link nav-home" href="#/">Review queue</a>
+    <div id="nav"></div>
+  </nav>
+  <main class="main" id="main"><div class="empty">Loading…</div></main>
+  <aside class="signoff" id="signoff" aria-label="Sign-off"></aside>
+</div>
+<div class="toast" id="toast" role="status" aria-live="polite"></div>
+
+<script>
+const TOKEN = "__AGENTBRIEF_TOKEN__";
+let state = { overview: null, detail: null, selected: null, openDiffs: new Set(), progress: null, progressKey: null, fresh: null };
+
+// Review progress (checked code, revealed/graded answers) lives per feature *and* code version:
+// if the agent changes the code, the fingerprint changes and the reviewer starts over.
+function loadProgress(f) {
+  const key = `agentbrief:${f.id}:${f.fingerprint}`;
+  if (state.progressKey === key) return;
+  let saved = null;
+  try { saved = JSON.parse(localStorage.getItem(key)); } catch (e) {}
+  state.progressKey = key;
+  state.progress = saved || { checked: [], revealed: [], answers: {}, typed: {}, note: f.review?.note || "" };
+}
+function saveProgress() {
+  try { localStorage.setItem(state.progressKey, JSON.stringify(state.progress)); } catch (e) {}
+}
+function gate(f) {
+  const p = state.progress;
+  const total = f.code.length + f.moves.length;  // code blocks first, then moves (same order as the server)
+  const checked = p.checked.filter((i) => i < total).length;
+  const answered = f.questions.filter((_, i) => i in p.answers).length;
+  const correct = f.questions.filter((_, i) => p.answers[i] === true).length;
+  return { checked, answered, correct, total, ready: checked === total && answered === f.questions.length };
+}
+
+const $ = (s) => document.querySelector(s);
+const esc = (s) => String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+const plural = (n, one, many = one + "s") => `${n} ${n === 1 ? one : many}`;
+const date = (iso) => {
+  const d = new Date(iso);
+  return isNaN(d) ? iso : d.toLocaleDateString(undefined, { day: "numeric", month: "short" }) + ", " +
+    d.toLocaleTimeString(undefined, { hour: "2-digit", minute: "2-digit" });
+};
+
+// Status as a glyph plus words; colour only reinforces what the words already say.
+const STATUS = {
+  passed: ["✓", "Tests pass", "ok"], failed: ["✗", "Tests failing", "bad"], missing: ["✗", "Test missing", "bad"],
+  "not-run": ["○", "Tests not run", "idle"], "no-tests": ["○", "No tests", "idle"], skipped: ["○", "Tests skipped", "idle"],
+  approved: ["✓", "Approved", "ok"], "changes-requested": ["✗", "Changes requested", "bad"],
+  "in-progress": ["○", "In progress", "idle"], planned: ["○", "Planned", "idle"],
+};
+function status(key) {
+  if (key === "unreviewed") return `<span class="st"><span class="hl">Needs review</span></span>`;
+  if (key === "stale") return `<span class="st"><span class="hl">Changed since review</span></span>`;
+  const [glyph, text, tone] = STATUS[key] || ["○", key, "idle"];
+  return `<span class="st st-${tone}"><span class="st-glyph" aria-hidden="true">${glyph}</span>${esc(text)}</span>`;
+}
+const needsYou = (f) => f.review_status === "unreviewed" || f.review_status === "stale";
+
+function toast(msg) {
+  const t = $("#toast"); t.textContent = msg; t.classList.add("show");
+  clearTimeout(toast.h); toast.h = setTimeout(() => t.classList.remove("show"), 3500);
+}
+
+async function api(path, body) {
+  const opts = body === undefined ? {} : {
+    method: "POST", body: JSON.stringify(body),
+    headers: { "Content-Type": "application/json", "X-Agentbrief-Token": TOKEN },
+  };
+  const res = await fetch(path, opts);
+  const data = await res.json();
+  if (!res.ok) throw new Error(data.error || res.statusText);
+  return data;
+}
+
+function highlight(code, lang) {
+  if (window.hljs && hljs.getLanguage(lang)) {
+    try { return hljs.highlight(code, { language: lang, ignoreIllegals: true }).value; } catch (e) {}
+  }
+  return esc(code);
+}
+
+function codeBlock(s) {
+  if (s.error) return `<div class="block-err">${esc(s.error)}</div>`;
+  if (!s.start) return `<div class="block-msg">Empty file.</div>`;
+  const n = s.end - s.start + 1;
+  const gutter = Array.from({ length: n }, (_, i) => s.start + i).join("\n");
+  return `<div class="code"><pre class="gutter" aria-hidden="true">${gutter}</pre><pre class="src"><code>${highlight(s.source, s.language)}</code></pre></div>`
+    + (s.truncated ? `<div class="block-msg">Showing the first ${n} lines. Point the manifest at a function or line range for a focused view.</div>` : "");
+}
+
+function renderDiff(text) {
+  if (!text) return `<pre class="diff">No changes compared with ${esc(state.overview?.base || "HEAD")}.</pre>`;
+  return `<pre class="diff">${text.split("\n").map((l) => {
+    const cls = l.startsWith("@@") ? "hunk" : l.startsWith("+") && !l.startsWith("+++") ? "add" : l.startsWith("-") && !l.startsWith("---") ? "del" : "";
+    return `<span class="${cls}">${esc(l)}</span>`;
+  }).join("")}</pre>`;
+}
+
+function loc(s) {
+  const range = s.start ? `<span class="lines">${s.end !== s.start ? `lines ${s.start}–${s.end}` : `line ${s.start}`}</span>` : "";
+  return `<code>${esc(s.path)}</code>${s.symbol ? ` <b>${esc(s.symbol)}</b>` : ""}${range}`;
+}
+
+function tick(index, checked) {
+  return `<label class="tick"><input type="checkbox" data-check="${index}" ${checked ? "checked" : ""}> ${checked ? "Checked" : "Mark as checked"}</label>`;
+}
+
+// ---------------------------------------------------------------- views
+
+function renderNav() {
+  const q = $("#filter").value.toLowerCase();
+  const feats = (state.overview?.features || []).filter((f) =>
+    !q || (f.title + " " + f.id + " " + f.summary).toLowerCase().includes(q));
+  const item = (f) => `
+    <a class="nav-link ${f.id === state.selected ? "active" : ""}" href="#/f/${encodeURIComponent(f.id)}">
+      ${needsYou(f) ? `<span class="pending" aria-hidden="true"></span>` : ""}
+      <div class="nav-title">${esc(f.title)}${needsYou(f) ? `<span class="sr"> (needs your review)</span>` : ""}</div>
+      <div class="nav-meta">${status(f.tests_outcome)}${needsYou(f) ? "" : status(f.review_status)}${f.status !== "done" ? status(f.status) : ""}
+        ${f.problems.length ? `<span class="st st-bad">${plural(f.problems.length, "problem")}</span>` : ""}</div>
+    </a>`;
+  const groups = [["Features", feats.filter((f) => f.kind !== "refactor")], ["Refactors", feats.filter((f) => f.kind === "refactor")]];
+  const showHeaders = groups[1][1].length > 0;
+  $("#nav").innerHTML = groups.filter(([, fs]) => fs.length)
+    .map(([name, fs]) => (showHeaders ? `<div class="nav-group">${name} <span>${fs.length}</span></div>` : "") + fs.map(item).join(""))
+    .join("") || `<div class="empty" style="padding:8px 18px">${q ? "Nothing matches that filter." : "Nothing documented yet."}</div>`;
+  if (feats.some(needsYou)) $("#nav").innerHTML += `<div class="sidebar-key"><span class="pending"></span>Needs your review</div>`;
+  document.querySelectorAll(".nav-home").forEach((a) => a.classList.toggle("active", !state.selected));
+}
+
+function setSignoff(html) {
+  $("#app").classList.toggle("with-signoff", html !== null);
+  $("#signoff").innerHTML = html || "";
+}
+
+function renderOverview() {
+  const o = state.overview;
+  const fs = o.features;
+  const refactors = fs.filter((f) => f.kind === "refactor").length;
+  const passing = fs.filter((f) => f.tests_outcome === "passed").length;
+  const failing = fs.filter((f) => f.tests_outcome === "failed" || f.tests_outcome === "missing").length;
+  const approved = fs.filter((f) => f.review_status === "approved").length;
+  const why = (f) => [
+    f.review_status === "stale" ? "changed since you approved it" : f.review_status === "unreviewed" ? "not reviewed yet" : "",
+    f.tests_outcome === "failed" || f.tests_outcome === "missing" ? "tests failing" : "",
+    f.problems.length ? plural(f.problems.length, "manifest problem") : "",
+  ].filter(Boolean).join(", ");
+  const waiting = fs.filter((f) => needsYou(f) || f.tests_outcome === "failed" || f.tests_outcome === "missing" || f.problems.length);
+
+  let html = `<div class="page"><h1 class="title">Review queue</h1>`;
+  if (!fs.length) {
+    html += `<div class="empty-hero"><p>Nothing to review yet. The agent hasn't documented any features in <code>.agentbrief/features/</code>.</p>
+      <p>Run <code>agentbrief init</code> in your project, then ask the agent to write manifests for what it built.</p></div>`;
+  } else {
+    const parts = [plural(fs.length - refactors, "feature")];
+    if (refactors) parts.push(plural(refactors, "refactor"));
+    html += `<p class="lede" id="tally">${parts.join(" and ")}. Tests pass for ${passing}${failing ? `, and fail for ${failing}` : ""}.
+      You've approved ${approved} of ${fs.length}.</p>`;
+    html += `<section class="section"><div class="section-head"><h2>Waiting for you</h2><span class="count">${waiting.length}</span></div>
+      ${waiting.length ? `<ul class="queue">${waiting.map((f) => `<li><a href="#/f/${encodeURIComponent(f.id)}">${needsYou(f) ? `<span class="pending" aria-hidden="true"></span>` : ""}
+          <span class="queue-title">${esc(f.title)}</span>
+          <span class="queue-why">${esc(why(f))}</span><span class="queue-kind">${f.kind === "refactor" ? "Refactor" : "Feature"}</span></a></li>`).join("")}</ul>`
+        : `<p class="empty">Nothing is waiting. Everything the agent documented is approved and passing.</p>`}</section>`;
+  }
+  if (o.manifest_errors.length) {
+    html += `<div class="problems"><b>These manifests couldn't be read</b><ul>${o.manifest_errors.map((e) => `<li>${esc(e)}</li>`).join("")}</ul></div>`;
+  }
+  html += `<section class="section"><div class="section-head"><h2>Changes no feature explains</h2>
+      ${o.uncovered_files ? `<span class="count">${o.uncovered_files.length}</span>` : ""}</div>`;
+  if (o.uncovered_files === null) {
+    html += `<p class="empty">This folder isn't a git repository, so changed files can't be tracked.</p>`;
+  } else if (o.uncovered_files.length) {
+    html += `<p class="section-intro">The agent changed these files compared with <code>${esc(o.base)}</code>, but no feature or refactor points at them. Ask it to document them, or check them by hand.</p>
+      <ul class="files">${o.uncovered_files.map((p) => `<li>${esc(p)}</li>`).join("")}</ul>`;
+  } else {
+    html += `<p class="empty">Every file changed since <code>${esc(o.base)}</code> is explained by a feature or refactor.</p>`;
+  }
+  html += `</section></div>`;
+  $("#main").innerHTML = html;
+  setSignoff(null);
+}
+
+function renderDetail() {
+  const f = state.detail;
+  const p = state.progress;
+  let html = `<div class="page">
+    <div class="kicker"><span>${f.kind === "refactor" ? "Refactor" : "Feature"}</span><span class="mono">${esc(f.manifest)}</span></div>
+    <h1 class="title">${esc(f.title)}</h1>
+    <div class="status-line">${status(f.tests_outcome)}${status(f.review_status)}${f.status !== "done" ? status(f.status) : ""}</div>
+    <p class="summary">${esc(f.summary)}</p>
+    ${f.details ? `<p class="details">${esc(f.details)}</p>` : ""}`;
+  if (f.problems.length) {
+    html += `<div class="problems"><b>The agent's manifest has problems</b><ul>${f.problems.map((x) => `<li>${esc(x)}</li>`).join("")}</ul></div>`;
+  }
+
+  if (f.moves.length) {
+    html += `<section class="section"><div class="section-head"><h2>What moved</h2><span class="count">${f.moves.length}</span></div>
+      <p class="section-intro">Old code comes from git at <code>${esc(f.base)}</code>, new code from your files.</p>
+      ${f.moves.map((m, j) => moveBlock(m, f.code.length + j, f.base)).join("")}</section>`;
+  }
+  if (f.code.length || f.kind !== "refactor") {
+    html += `<section class="section"><div class="section-head"><h2>Code</h2><span class="count">${f.code.length}</span></div>
+      ${f.code.map((s, i) => {
+        const checked = p.checked.includes(i);
+        return `<article class="block ${checked ? "checked" : ""}">
+          <div class="block-head"><div class="where">${loc(s)}</div>
+            <button class="quiet" data-diff="${esc(s.path)}">${state.openDiffs.has(s.path) ? "Hide diff" : "Show diff"}</button>
+            ${tick(i, checked)}</div>
+          ${s.note ? `<p class="block-note">${esc(s.note)}</p>` : ""}
+          ${codeBlock(s)}
+          <div data-diff-slot="${esc(s.path)}"></div>
+        </article>`;
+      }).join("") || `<p class="empty">The agent didn't point at any code.</p>`}</section>`;
+  }
+
+  html += `<section class="section"><div class="section-head"><h2>Tests</h2><span class="count">${f.tests.length}</span>
+      ${f.tests.length ? `<button class="quiet" id="run-feature">Run these tests</button>` : ""}</div>
+    ${f.tests.map((t) => {
+      const fails = t.runs.filter((r) => r.longrepr && r.outcome !== "passed");
+      return `<article class="block plain">
+        <div class="block-head"><div class="where">${loc(t)}</div>${status(t.outcome)}
+          ${t.ran_at ? `<span class="when">${esc(date(t.ran_at))}</span>` : ""}</div>
+        ${t.note ? `<p class="block-note">${esc(t.note)}</p>` : ""}
+        ${fails.length ? `<details open><summary>Why it failed</summary>${fails.map((r) => `<pre class="failure">${esc(r.nodeid)}\n${esc(r.longrepr)}</pre>`).join("")}</details>` : ""}
+        <details ${t.error ? "open" : ""}><summary>Test code</summary>${codeBlock(t)}</details>
+      </article>`;
+    }).join("") || `<p class="empty">The agent didn't list any tests. Ask it to add some before approving.</p>`}</section>`;
+
+  if (f.questions.length) {
+    html += `<section class="section"><div class="section-head"><h2>Check your understanding</h2><span class="count">${f.questions.length}</span></div>
+      <p class="section-intro">Answer in your head or type it, then show the answer and grade yourself honestly. Your score is saved with your review.</p>
+      ${f.questions.map((q, i) => {
+        const shown = p.revealed.includes(i), grade = p.answers[i], done = grade !== undefined;
+        return `<div class="q">
+          <p class="q-text"><span class="q-num">${done ? `Q${i + 1}` : `<span class="hl">Q${i + 1}</span>`}</span>${esc(q.question)}</p>
+          <textarea data-typed="${i}" aria-label="Your answer to question ${i + 1}" placeholder="Your answer (optional, only you see it)">${esc(p.typed[i] || "")}</textarea>
+          <div class="q-row"><button class="quiet" data-reveal="${i}">${shown ? "Hide answer" : "Show answer"}</button>
+            ${grade === true ? `<span class="st st-ok"><span class="st-glyph">✓</span>You got it</span>` : grade === false ? `<span class="st st-bad"><span class="st-glyph">✗</span>You missed it</span>` : ""}</div>
+          ${shown ? `<div class="answer">${esc(q.answer)}${q.about ? `<span class="look">Look at <code>${esc(q.about)}</code></span>` : ""}</div>
+            <div class="q-row"><span>Did you get it right?</span>
+              <button class="grade ${grade === true ? "selected-ok" : ""}" data-grade="${i}:1">I got it</button>
+              <button class="grade ${grade === false ? "selected-bad" : ""}" data-grade="${i}:0">I missed it</button></div>` : ""}
+        </div>`;
+      }).join("")}</section>`;
+  }
+  html += `</div>`;
+  $("#main").innerHTML = html;
+  renderSignoff();
+  state.openDiffs.forEach(loadDiff);
+}
+
+function renderSignoff() {
+  const f = state.detail, rv = f.review, g = gate(f);
+  const what = f.moves.length ? (f.code.length ? "code and moves" : "moves") : "code";
+  let stamp = "";
+  if (rv && f.review_status !== "stale") {
+    const ok = rv.status === "approved";
+    const score = rv.quiz && rv.quiz.total ? `Understood ${rv.quiz.correct} of ${rv.quiz.total}` : "";
+    stamp = `<div class="stamp ${ok ? "ok" : "bad"} ${state.fresh === f.id ? "fresh" : ""}">${ok ? "Approved" : "Changes requested"}
+      <small>${esc(date(rv.at))}</small>${score ? `<small>${score}</small>` : ""}</div>`;
+  }
+  // While a change request is open (the agent hasn't touched the code yet), keep the hand-off one click away.
+  const handoff = rv && rv.status === "changes-requested" && f.review_status !== "stale" ? `<div class="handoff">
+      <button id="copy-request">Copy request for the agent</button>
+      <p class="signoff-hint">Paste it into Claude Code or any other agent.</p></div>` : "";
+  const item = (done, label, sub) => `<li class="${done ? "done" : "todo"}"><span class="mark" aria-hidden="true"></span>
+    <span>${label}</span>${sub ? `<span class="gate-sub">${sub}</span>` : ""}</li>`;
+  setSignoff(`
+    <h2>Sign-off</h2>
+    <p class="signoff-intro">Approve once you've checked every piece of ${what} and answered the questions.</p>
+    ${stamp}${handoff}
+    ${f.review_status === "stale" ? `<div class="stale-note">The agent changed this after you ${rv.status === "approved" ? "approved" : "reviewed"} it on ${esc(date(rv.at))}. Check it again.</div>` : ""}
+    <ul class="gate">
+      ${item(g.checked === g.total, `Checked ${what}: ${g.checked} of ${g.total}`)}
+      ${f.questions.length ? item(g.answered === f.questions.length, `Answered questions: ${g.answered} of ${f.questions.length}`, g.answered ? `${g.correct} right so far` : "") : ""}
+      <li class="info"><span class="mark" aria-hidden="true"></span><span>${status(f.tests_outcome)}</span>
+        <span class="gate-sub">For information. Doesn't block approval.</span></li>
+    </ul>
+    <textarea id="note" aria-label="Note for the agent" placeholder="Note for the agent, e.g. what to fix">${esc(state.progress.note)}</textarea>
+    <div class="actions">
+      <button class="primary" data-review="approved" ${g.ready ? "" : `disabled title="Check every piece of ${what} and answer every question first"`}>Approve</button>
+      <button class="danger" data-review="changes-requested">Request changes</button>
+    </div>
+    ${g.ready ? "" : `<p class="signoff-hint">Approve unlocks when the list above is done.</p>`}
+    ${rv ? `<div style="text-align:center"><button class="quiet clear" data-review="">Clear review</button></div>` : ""}`);
+}
+
+// What gets pasted into the agent: the note plus exactly where to look and how to finish.
+function agentRequest(f, note) {
+  const ref = (s) => `${s.path}${s.symbol ? " :: " + s.symbol : ""}${s.start ? ` (lines ${s.start}-${s.end})` : ""}`;
+  const out = [`I reviewed the ${f.kind === "refactor" ? "refactor" : "feature"} "${f.title}" (${f.manifest}) and I'm requesting changes:`,
+    "", note.trim(), ""];
+  if (f.code.length) out.push("Code I reviewed:", ...f.code.map((s) => `- ${ref(s)}`), "");
+  if (f.moves.length) out.push("Moves I reviewed:", ...f.moves.map((m) => `- ${[m.before && ref(m.before), m.after && ref(m.after)].filter(Boolean).join(" -> ")}`), "");
+  if (f.tests.length) out.push("Tests:", ...f.tests.map((t) => `- ${t.nodeid} (${t.outcome})`), "");
+  out.push(`When you're done, update ${f.manifest} if the behavior or structure changed (including its questions), ` +
+    `then run \`agentbrief check\` and \`agentbrief test ${f.id}\`. I'll review it again.`);
+  return out.join("\n");
+}
+
+async function copyText(text) {
+  try { await navigator.clipboard.writeText(text); return true; } catch (e) {}
+  // Fallback for browsers that block the async clipboard API.
+  const area = Object.assign(document.createElement("textarea"), { value: text });
+  area.style.position = "fixed"; area.style.opacity = "0";
+  document.body.append(area); area.select();
+  let ok = false;
+  try { ok = document.execCommand("copy"); } catch (e) {}
+  area.remove();
+  return ok;
+}
+
+const MOVE_KIND = { new: "New code", removed: "Removed", moved: "Moved", renamed: "Renamed", edited: "Edited in place" };
+
+function moveBlock(m, index, base) {
+  const checked = state.progress.checked.includes(index);
+  const where = (m.before ? `<div class="mv"><span class="mv-l">Was</span><span>${loc(m.before)}</span></div>` : "")
+    + (m.after ? `<div class="mv"><span class="mv-l">Now</span><span>${loc(m.after)}</span></div>` : "");
+  const verdict = m.body === "unchanged" ? `<span class="st st-ok"><span class="st-glyph">=</span>Body unchanged</span>`
+    : m.body === "changed" ? `<span class="st"><span class="hl">Body changed</span></span>` : "";
+  let body;
+  if (m.kind === "removed") {
+    body = `<div class="block-msg">Removed. This is how it looked at ${esc(base)}:</div>${codeBlock(m.before)}`;
+  } else if (m.before?.error) {
+    body = `<div class="block-msg warn">The old version couldn't be loaded (${esc(m.before.error)}), so only the new code is shown.</div>${codeBlock(m.after)}`;
+  } else if (m.body === "changed") {
+    body = `<div class="block-msg">The body changed during the move. Old and new versions:</div>${renderDiff(m.diff)}
+      <details><summary>New version in full</summary>${codeBlock(m.after)}</details>`;
+  } else {
+    const short = (x) => (x?.symbol || "").split(".").pop();
+    const renamed = short(m.before) !== short(m.after);
+    body = (m.body === "unchanged" ? `<div class="block-msg">Same code as before${renamed ? ", apart from the new name" : ""}.${m.kind === "moved" ? " Only its location changed." : ""}</div>` : "")
+      + codeBlock(m.after);
+  }
+  return `<article class="block ${checked ? "checked" : ""}">
+    <div class="block-head"><div class="where">${where}</div>
+      <span class="move-kind">${esc(MOVE_KIND[m.kind])}</span>${verdict}${tick(index, checked)}</div>
+    ${m.note ? `<p class="block-note">${esc(m.note)}</p>` : ""}
+    ${body}
+  </article>`;
+}
+
+async function loadDiff(path) {
+  const slots = [...document.querySelectorAll("[data-diff-slot]")].filter((el) => el.dataset.diffSlot === path);
+  if (!slots.length) return;
+  const { diff } = await api(`/api/diff?path=${encodeURIComponent(path)}`);
+  slots.forEach((el) => el.innerHTML = renderDiff(diff));
+}
+
+// ------------------------------------------------------------- actions
+
+async function refresh() {
+  try {
+    const prev = state.detail?.fingerprint;
+    state.overview = await api("/api/overview");
+    $("#root").textContent = state.overview.root;
+    const route = decodeURIComponent((location.hash.match(/^#\/f\/(.+)$/) || [])[1] || "");
+    state.selected = route || null;
+    renderNav();
+    if (!state.selected) { state.detail = null; return renderOverview(); }
+    const summary = state.overview.features.find((f) => f.id === state.selected);
+    if (!summary) {
+      $("#main").innerHTML = `<div class="page"><p class="empty">“${esc(state.selected)}” no longer exists. The agent may have renamed or removed its manifest.</p></div>`;
+      return setSignoff(null);
+    }
+    // Re-render only when something changed, so polling doesn't clobber a half-typed note.
+    const changed = !state.detail || state.detail.id !== summary.id || summary.fingerprint !== prev
+      || summary.tests_outcome !== state.detail.tests_outcome || summary.review_status !== state.detail.review_status;
+    if (changed) {
+      state.detail = await api(`/api/features/${encodeURIComponent(summary.id)}`);
+      loadProgress(state.detail);
+      renderDetail();
+    }
+  } catch (e) { toast("Couldn't refresh: " + e.message); }
+}
+
+async function runTests(btn, featureId) {
+  btn.disabled = true; const txt = btn.textContent; btn.textContent = "Running tests…";
+  try {
+    const r = await api("/api/run-tests", featureId ? { feature_id: featureId } : {});
+    const counts = Object.values(r.results).reduce((a, x) => (a[x.outcome] = (a[x.outcome] || 0) + 1, a), {});
+    toast(`Tests finished in ${r.duration}s: ` + Object.entries(counts).map(([k, v]) => `${v} ${k}`).join(", "));
+    state.detail = null; await refresh();
+  } catch (e) { toast("Tests couldn't run: " + e.message); }
+  finally { btn.disabled = false; btn.textContent = txt; }
+}
+
+document.addEventListener("click", async (ev) => {
+  const t = ev.target.closest("button"); if (!t) return;
+  if (t.id === "run-all") return runTests(t, null);
+  if (t.id === "run-feature") return runTests(t, state.detail.id);
+  if (t.dataset.diff !== undefined) {
+    const p = t.dataset.diff;
+    if (state.openDiffs.has(p)) { state.openDiffs.delete(p); } else { state.openDiffs.add(p); }
+    return renderDetail();
+  }
+  if (t.dataset.reveal !== undefined) {
+    const i = +t.dataset.reveal, r = state.progress.revealed;
+    state.progress.revealed = r.includes(i) ? r.filter((x) => x !== i) : [...r, i];
+    saveProgress(); return renderDetail();
+  }
+  if (t.dataset.grade !== undefined) {
+    const [i, ok] = t.dataset.grade.split(":");
+    state.progress.answers[i] = ok === "1";
+    saveProgress(); return renderDetail();
+  }
+  if (t.id === "copy-request") {
+    const f = state.detail;
+    return toast(await copyText(agentRequest(f, f.review.note)) ? "Request copied. Paste it into your agent." : "Couldn't copy. Your browser blocked the clipboard.");
+  }
+  if (t.dataset.review !== undefined) {
+    const f = state.detail, verdict = t.dataset.review || null, note = $("#note").value;
+    if (verdict === "changes-requested" && !note.trim()) {
+      $("#note").focus();
+      return toast("Write what the agent should change first.");
+    }
+    try {
+      await api("/api/review", { feature_id: f.id, status: verdict,
+        note, fingerprint: f.fingerprint, checked_code: state.progress.checked,
+        answers: f.questions.map((_, i) => state.progress.answers[i]) });
+      if (verdict === "changes-requested") {
+        toast(await copyText(agentRequest(f, note))
+          ? "Changes requested. The request is copied, so paste it into your agent."
+          : "Changes requested. Use “Copy request for the agent” to copy it.");
+      } else {
+        toast(verdict === "approved" ? "Approved" : "Review cleared");
+      }
+      state.fresh = verdict ? f.id : null;
+      state.detail = null; await refresh();
+    } catch (e) { toast(e.message); state.detail = null; await refresh(); }
+  }
+});
+
+$("#filter").addEventListener("input", renderNav);
+document.addEventListener("change", (ev) => {
+  const el = ev.target;
+  if (el.dataset?.check === undefined) return;
+  const i = +el.dataset.check, c = state.progress.checked;
+  state.progress.checked = el.checked ? [...new Set([...c, i])] : c.filter((x) => x !== i);
+  saveProgress(); renderDetail();
+});
+// Typed text is saved without re-rendering, so the cursor stays put.
+document.addEventListener("input", (ev) => {
+  const el = ev.target;
+  if (el.id === "note") state.progress.note = el.value;
+  else if (el.dataset?.typed !== undefined) state.progress.typed[el.dataset.typed] = el.value;
+  else return;
+  saveProgress();
+});
+window.addEventListener("hashchange", () => { state.detail = null; state.fresh = null; state.openDiffs.clear(); refresh(); window.scrollTo(0, 0); });
+window.addEventListener("load", () => { refresh(); setInterval(() => { if (!document.hidden) refresh(); }, 4000); });
+</script>
+</body>
+</html>

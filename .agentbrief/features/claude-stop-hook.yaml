@@ -1,0 +1,41 @@
+id: claude-stop-hook
+title: Don't let Claude finish with broken manifests
+status: done
+summary: >
+  When Claude Code tries to end its turn while a feature description is broken
+  (missing code, missing tests, invalid file), it is sent back with the list of
+  problems to fix. Set up with `agentbrief init --claude-hook`.
+details: >
+  Claude gets one forced retry per turn, so a problem it can't fix never traps it
+  in a loop. If agentbrief isn't installed, the hook does nothing. Existing Claude Code
+  settings are merged, never overwritten.
+code:
+  - path: src/agentbrief/cli.py
+    symbol: cmd_hook_stop
+    note: exit code 2 tells Claude Code to keep going and shows Claude the errors
+  - path: src/agentbrief/cli.py
+    symbol: install_claude_hook
+    note: writes the launcher script and adds it to .claude/settings.json
+  - path: src/agentbrief/cli.py
+    symbol: check_errors
+    note: same checks as `agentbrief check`
+tests:
+  - path: tests/test_claude_hook.py
+    symbol: test_hook_stop_exit_codes
+    note: blocks on errors, passes when clean, respects the loop guard
+  - path: tests/test_claude_hook.py
+    symbol: test_install_merges_into_existing_settings_once
+  - path: tests/test_claude_hook.py
+    symbol: test_install_refuses_to_overwrite_unreadable_settings
+  - path: tests/test_claude_hook.py
+    symbol: test_launcher_finds_project_venv_and_reports_to_claude
+    note: end-to-end run of the generated script, as Claude Code would run it
+questions:
+  - question: How does the hook make Claude keep working instead of stopping?
+    answer: It exits with code 2; Claude Code then shows Claude the error text from stderr and continues.
+    about: src/agentbrief/cli.py::cmd_hook_stop
+  - question: If Claude can't fix the manifest errors, does it get stuck in a loop?
+    answer: No. On the second attempt (stop_hook_active is true) the hook lets it stop.
+    about: src/agentbrief/cli.py::cmd_hook_stop
+  - question: What happens when the hook runs in a project where agentbrief isn't installed?
+    answer: Nothing. The launcher can't find agentbrief and exits 0, so Claude is never blocked.

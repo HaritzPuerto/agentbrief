@@ -1,0 +1,29 @@
+id: manifest-validation
+title: Validate what agents write
+status: done
+summary: >
+  Agents describe each feature in a small YAML file. Broken or incomplete
+  files are reported clearly instead of crashing the tool, and one bad file
+  never hides the others.
+code:
+  - path: src/agentbrief/models.py
+    symbol: parse_feature
+    note: required fields, id format, allowed statuses
+  - path: src/agentbrief/models.py
+    symbol: load_features
+    note: collects errors per file; rejects duplicate ids and id/filename mismatches
+tests:
+  - path: tests/test_models.py
+    symbol: test_parse_rejects_invalid_manifests
+    note: each kind of mistake produces a readable error
+  - path: tests/test_models.py
+    symbol: test_load_reports_bad_files_without_dropping_good_ones
+  - path: tests/test_models.py
+    symbol: test_refs_accept_shorthand_and_line_ranges
+questions:
+  - question: If one manifest file has invalid YAML, are the other features still shown?
+    answer: Yes. Each file is loaded separately; the broken one is reported as an error and skipped.
+    about: src/agentbrief/models.py::load_features
+  - question: What happens if a manifest's id doesn't match its filename?
+    answer: It's rejected with an error saying the id must match the filename.
+    about: src/agentbrief/models.py::load_features

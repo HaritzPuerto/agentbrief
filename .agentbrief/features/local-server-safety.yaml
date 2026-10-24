@@ -1,0 +1,22 @@
+id: local-server-safety
+title: Review UI that only you can control
+status: done
+summary: >
+  The review page runs on your own machine. Other websites open in your
+  browser can't use it to run your tests or change your reviews.
+code:
+  - path: src/agentbrief/server.py
+    symbol: make_handler
+    note: checks the Host header and a per-session token on every write
+  - path: src/agentbrief/server.py
+    symbol: serve
+tests:
+  - path: tests/test_cli_and_server.py
+    symbol: test_server_serves_features_and_guards_writes
+questions:
+  - question: Could a random website open in your browser trigger a test run through the review UI?
+    answer: No. Writes need a secret per-session token embedded in the page, and requests must be addressed to localhost.
+    about: src/agentbrief/server.py::make_handler
+  - question: What happens if you approve a feature while the agent changed its code after you opened the page?
+    answer: The server refuses with a "code changed, reload" error, because the fingerprint you saw no longer matches.
+    about: src/agentbrief/server.py::make_handler

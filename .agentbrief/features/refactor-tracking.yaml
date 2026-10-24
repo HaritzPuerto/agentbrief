@@ -1,0 +1,43 @@
+id: refactor-tracking
+title: Review code reorganizations
+status: done
+summary: >
+  When the agent moves, renames or splits code without adding behavior, it shows up
+  under "Refactors" in the sidebar. For every move you see the old code next to the
+  new code, and whether anything besides the location changed.
+details: >
+  Old code is read from git at the commit recorded in the manifest (`base`), so it
+  stays viewable after the refactor is committed. Approving a refactor requires
+  ticking every move as checked.
+code:
+  - path: src/agentbrief/core.py
+    symbol: move_view
+    note: classifies each move and diffs the old and new body
+  - path: src/agentbrief/extract.py
+    symbol: _read_at
+    note: reads the old version from git; refuses refs that look like git options
+  - path: src/agentbrief/models.py
+    symbol: _parse_move
+tests:
+  - path: tests/test_refactor.py
+    symbol: test_moves_are_classified_and_body_changes_detected
+  - path: tests/test_refactor.py
+    symbol: test_old_code_comes_from_base_even_after_the_refactor_is_committed
+  - path: tests/test_refactor.py
+    symbol: test_missing_new_location_is_a_problem_but_missing_old_one_is_not
+  - path: tests/test_refactor.py
+    symbol: test_moved_files_count_as_explained_changes
+  - path: tests/test_refactor.py
+    symbol: test_approval_requires_every_move_checked
+  - path: tests/test_refactor.py
+    symbol: test_git_ref_from_a_manifest_cannot_become_a_git_option
+questions:
+  - question: The agent renames a function but doesn't change its body. Does the UI say "body changed"?
+    answer: No. The old name is swapped for the new one before comparing, so a pure rename shows "body unchanged".
+    about: src/agentbrief/core.py::move_view
+  - question: After the refactor is committed, HEAD no longer has the old code. Where does the "before" side come from?
+    answer: From the commit in the manifest's `base` field (or `agentbrief serve --base`, else HEAD).
+    about: src/agentbrief/core.py::move_view
+  - question: If the old location can't be found in git, does `agentbrief check` fail?
+    answer: No, the move card shows a warning. Only a missing *new* location is an error.
+    about: src/agentbrief/core.py::feature_view

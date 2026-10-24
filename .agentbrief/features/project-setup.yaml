@@ -1,0 +1,29 @@
+id: project-setup
+title: One-command setup in any project
+status: done
+summary: >
+  `agentbrief init` adds instructions to AGENTS.md telling agents how to describe
+  their work, and links them from CLAUDE.md so Claude Code follows them too.
+  Running it again updates the instructions without touching your own text.
+code:
+  - path: src/agentbrief/cli.py
+    symbol: cmd_init
+  - path: src/agentbrief/cli.py
+    symbol: upsert_section
+  - path: src/agentbrief/cli.py
+    symbol: cmd_check
+    note: what agents run before finishing; exits 1 on errors
+tests:
+  - path: tests/test_cli_and_server.py
+    symbol: test_upsert_section_is_idempotent_and_preserves_user_text
+  - path: tests/test_cli_and_server.py
+    symbol: test_init_writes_agents_md_and_links_claude_md
+  - path: tests/test_cli_and_server.py
+    symbol: test_check_and_test_exit_codes
+questions:
+  - question: If you run `agentbrief init` twice, does AGENTS.md end up with two copies of the instructions?
+    answer: No. The section between the agentbrief markers is replaced in place; your own text is untouched.
+    about: src/agentbrief/cli.py::upsert_section
+  - question: Why does init add "@AGENTS.md" to CLAUDE.md?
+    answer: Claude Code reads CLAUDE.md, not AGENTS.md, so the import makes Claude see the manifest rules.
+    about: src/agentbrief/cli.py::cmd_init

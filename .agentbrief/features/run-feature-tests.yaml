@@ -1,0 +1,33 @@
+id: run-feature-tests
+title: Run the tests that prove a feature
+status: done
+summary: >
+  With one click (or `agentbrief test <id>`), the tests a feature claims are run,
+  and each one shows passed, failed or missing, with the failure output.
+  A test the agent names that doesn't exist counts as a failure, not a pass.
+code:
+  - path: src/agentbrief/core.py
+    symbol: run_tests
+    note: retries without unknown tests so one typo doesn't hide the other results
+  - path: src/agentbrief/pytest_plugin.py
+    symbol: pytest_runtest_logreport
+    note: records the outcome of every test, including setup/teardown errors
+  - path: src/agentbrief/core.py
+    symbol: aggregate
+tests:
+  - path: tests/test_core.py
+    symbol: test_run_tests_records_pass_fail_and_missing
+  - path: tests/test_core.py
+    symbol: test_aggregate_prefers_the_worst_outcome
+  - path: tests/test_cli_and_server.py
+    symbol: test_server_runs_feature_tests
+questions:
+  - question: If a manifest lists a test name with a typo, how is that feature's test status shown?
+    answer: As "missing", which counts as a failure, never as passing.
+    about: src/agentbrief/core.py::run_tests
+  - question: Why can't one typo'd test name hide the results of all the other tests?
+    answer: pytest aborts the whole run on an unknown test id (exit code 4), so the tool reruns only the tests that exist.
+    about: src/agentbrief/core.py::run_tests
+  - question: A feature has one passing and one skipped test. What is its overall status?
+    answer: Passed. It's "skipped" only if every test was skipped.
+    about: src/agentbrief/core.py::aggregate

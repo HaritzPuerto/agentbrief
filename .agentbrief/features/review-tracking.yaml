@@ -1,0 +1,54 @@
+id: review-tracking
+title: Approve features and notice when they change
+status: done
+summary: >
+  The reviewer can approve a feature or request changes. Approving requires
+  ticking every code block as checked and answering the feature's questions.
+  Requesting changes needs a note, and copies a ready-to-paste request for the agent. If the agent later
+  edits the code or tests behind an approved feature, the approval is marked
+  "changed since review" so it gets checked again.
+details: >
+  Edits elsewhere in the same file don't invalidate the review; only the
+  referenced functions do. The server also refuses an approval if the code
+  changed while the page was open.
+code:
+  - path: src/agentbrief/core.py
+    symbol: fingerprint
+  - path: src/agentbrief/core.py
+    symbol: feature_view
+    note: compares the stored fingerprint with the current one
+  - path: src/agentbrief/core.py
+    symbol: save_review
+  - path: src/agentbrief/core.py
+    symbol: approval_gate
+    note: approve only after every code block is checked and every question answered; returns the score
+  - path: src/agentbrief/static/index.html
+    lines: "253-273"
+    note: browser side of the gate; progress is kept per code version
+  - path: src/agentbrief/static/index.html
+    lines: "531-542"
+    note: the text copied for the agent when you request changes
+tests:
+  - path: tests/test_core.py
+    symbol: test_review_goes_stale_when_reviewed_code_changes
+  - path: tests/test_core.py
+    symbol: test_review_ignores_edits_outside_referenced_symbols
+  - path: tests/test_cli_and_server.py
+    symbol: test_server_serves_features_and_guards_writes
+    note: covers the "code changed while you were looking" rejection
+  - path: tests/test_core.py
+    symbol: test_approval_gate_requires_all_code_checked_and_all_questions_answered
+  - path: tests/test_cli_and_server.py
+    symbol: test_server_blocks_approval_until_code_checked_and_questions_answered
+questions:
+  - question: You approved a feature, then the agent edits a different function in the same file. Is the approval still valid?
+    answer: Yes. Only the referenced functions and tests are fingerprinted, not whole files.
+    about: src/agentbrief/core.py::fingerprint
+  - question: What do you need to do before the Approve button becomes clickable?
+    answer: Tick every code block as checked and answer (reveal and self-grade) every question.
+    about: src/agentbrief/core.py::approval_gate
+  - question: Is "Request changes" also blocked until you finish the questions?
+    answer: No, only approving is gated, since you may spot a problem early.
+    about: src/agentbrief/server.py::make_handler
+  - question: You press "Request changes". How does the agent find out?
+    answer: It doesn't on its own. The request (your note, the code and tests involved, how to finish) is copied to your clipboard for you to paste into the agent. The copy button stays until the agent changes the code.
